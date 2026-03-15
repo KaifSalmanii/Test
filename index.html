@@ -1,73 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Neon Anonymous Chat — Random + Private Rooms + Desi Bot (PeerJS)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-  <style>
-    :root{
-      --bg0:#060812;
-      --bg1:#070a16;
-      --card: rgba(12, 18, 40, .62);
-      --card2: rgba(10, 14, 28, .70);
-      --stroke: rgba(120, 200, 255, .20);
-      --stroke2: rgba(120, 200, 255, .14);
-      --text:#eaf3ff;
-      --muted: rgba(234, 243, 255, .68);
-      --muted2: rgba(234, 243, 255, .50);
-      --blue:#49b7ff;
-      --blue2:#0ea5ff;
-      --cyan:#5dfcff;
-      --good:#32e6a8;
-      --warn:#ffd166;
-      --bad:#ff4d6d;
-      --shadow: 0 20px 60px rgba(0,0,0,.55);
-      --shadow2: 0 10px 30px rgba(0,0,0,.35);
-      --radius: 18px;
-      --radius2: 14px;
-      --ring: 0 0 0 3px rgba(73,183,255,.18), 0 0 0 1px rgba(73,183,255,.25) inset;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GhostLine Encrypted | Secure Anonymous Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        :root { --neon-cyan: #0ff; }
+        body { background: #0a0a0a; color: #fff; font-family: 'Inter', sans-serif; overflow-x: hidden; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(10px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glow { box-shadow: 0 0 15px rgba(0, 255, 255, 0.3); }
+        .neon-text { color: var(--neon-cyan); text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+        #chat-window { display: none; }
+        #screenshot-overlay { display: none; position: fixed; inset: 0; background: #000; z-index: 1000; align-items: center; justify-content: center; }
+        .chat-bubble { max-width: 80%; padding: 10px 15px; border-radius: 15px; margin-bottom: 10px; }
+    </style>
+</head>
+<body class="flex flex-col min-h-screen">
 
-    [data-theme="light"]{
-      --bg0:#f6f9ff;
-      --bg1:#eef6ff;
-      --card: rgba(255,255,255,.78);
-      --card2: rgba(255,255,255,.88);
-      --stroke: rgba(17, 106, 173, .16);
-      --stroke2: rgba(17, 106, 173, .10);
-      --text:#0b1020;
-      --muted: rgba(11,16,32,.65);
-      --muted2: rgba(11,16,32,.50);
-      --shadow: 0 20px 60px rgba(0,20,60,.14);
-      --shadow2: 0 10px 30px rgba(0,20,60,.10);
-      --ring: 0 0 0 3px rgba(14,165,255,.18), 0 0 0 1px rgba(14,165,255,.22) inset;
-    }
+    <main class="flex-grow flex items-center justify-center p-4">
+        <!-- Home Screen -->
+        <div id="home-screen" class="glass p-10 rounded-3xl w-full max-w-md text-center">
+            <h1 class="text-4xl font-bold mb-2 neon-text">GhostLine</h1>
+            <p class="text-gray-400 mb-8">End-to-End Encrypted Anonymous Chat</p>
+            <div class="space-y-4">
+                <button onclick="createRoom()" class="w-full py-3 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold transition glow">Create Room</button>
+                <button onclick="joinRoomPrompt()" class="w-full py-3 rounded-xl border border-cyan-500 hover:bg-cyan-500/10 text-cyan-500 font-bold transition">Join Room</button>
+            </div>
+        </div>
 
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
-      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      color:var(--text);
-      background:
-        radial-gradient(1200px 700px at 20% -10%, rgba(73,183,255,.20), transparent 60%),
-        radial-gradient(900px 700px at 90% 10%, rgba(93,252,255,.12), transparent 60%),
-        radial-gradient(900px 700px at 60% 120%, rgba(14,165,255,.18), transparent 60%),
-        linear-gradient(180deg, var(--bg0), var(--bg1));
-      overflow-x:hidden;
-    }
+        <!-- Chat Screen -->
+        <div id="chat-window" class="glass w-full max-w-2xl h-[80vh] rounded-3xl flex flex-col p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-cyan-400 font-mono" id="room-display">Room: ...</h2>
+                <button onclick="wipeChat()" class="text-xs bg-red-900/30 text-red-400 px-3 py-1 rounded-full border border-red-500/30">Wipe Chat</button>
+            </div>
+            <div id="messages" class="flex-grow overflow-y-auto mb-4 space-y-2"></div>
+            <div class="flex gap-2">
+                <input id="msg-input" type="text" placeholder="Encrypted message..." class="flex-grow bg-black/50 border border-gray-700 rounded-xl px-4 py-3 outline-none focus:border-cyan-500">
+                <button onclick="sendMessage()" class="px-6 bg-cyan-500 text-black font-bold rounded-xl">Send</button>
+            </div>
+        </div>
+    </main>
 
-    .wrap{
-      max-width: 1120px;
-      margin: 0 auto;
-      padding: 20px 16px 28px;
-    }
+    <footer class="text-center p-6 text-sm text-gray-500">
+        <p>Developed by KaifSalmani</p>
+        <a href="https://kaifsalmani-donation.blogspot.com/?m=1" class="text-cyan-500 hover:underline">Support Donation</a>
+    </footer>
 
-    .topbar{
+    <div id="screenshot-overlay">
+        <h1 class="text-white text-2xl">⚠ SECURITY ALERT: Screenshot Detected</h1>
+    </div>
+
+    <script>
+        let secretKey = "";
+        let roomId = "";
+
+        // UI Logic
+        function createRoom() {
+            roomId = Math.random().toString(36).substring(2, 10).toUpperCase();
+            secretKey = Math.random().toString(36).substring(2, 15);
+            window.location.hash = roomId;
+            document.getElementById('home-screen').style.display = 'none';
+            document.getElementById('chat-window').style.display = 'flex';
+            document.getElementById('room-display').innerText = "Room ID: " + roomId;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('msg-input');
+            if (!input.value) return;
+            const encrypted = CryptoJS.AES.encrypt(input.value, secretKey).toString();
+            appendMessage(encrypted, true);
+            input.value = '';
+        }
+
+        function appendMessage(text, isSelf) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = `chat-bubble ${isSelf ? 'ml-auto bg-cyan-900' : 'bg-gray-800'}`;
+            const decrypted = CryptoJS.AES.decrypt(text, secretKey).toString(CryptoJS.enc.Utf8);
+            div.innerText = decrypted || "⚠️ Decryption Failed";
+            container.appendChild(div);
+        }
+
+        function wipeChat() {
+            document.getElementById('messages').innerHTML = '';
+        }
+
+        // Security: Screenshot/Recording Detection
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'PrintScreen') triggerSecurityAlert();
+        });
+
+        function triggerSecurityAlert() {
+            const overlay = document.getElementById('screenshot-overlay');
+            overlay.style.display = 'flex';
+            setTimeout(() => overlay.style.display = 'none', 3000);
+            appendMessage(CryptoJS.AES.encrypt("⚠ User took a screenshot.", secretKey).toString(), false);
+        }
+
+        // URL Handling
+        if(window.location.hash) {
+            roomId = window.location.hash.substring(1);
+            document.getElementById('home-screen').style.display = 'none';
+            document.getElementById('chat-window').style.display = 'flex';
+            secretKey = prompt("Enter the shared room key:");
+        }
+    </script>
+</body>
+</html>    .topbar{
       display:flex;
       align-items:center;
       justify-content:space-between;
