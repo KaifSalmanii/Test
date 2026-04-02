@@ -1,39 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Neon Anonymous Chat — Random + Private Rooms (PeerJS)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terabox Player</title>
   <style>
-    :root{
-      --bg0:#060812;
-      --bg1:#070a16;
-      --card: rgba(12, 18, 40, .62);
-      --card2: rgba(10, 14, 28, .70);
-      --stroke: rgba(120, 200, 255, .20);
-      --stroke2: rgba(120, 200, 255, .14);
-      --text:#eaf3ff;
-      --muted: rgba(234, 243, 255, .68);
-      --muted2: rgba(234, 243, 255, .50);
-      --blue:#49b7ff;
-      --blue2:#0ea5ff;
-      --cyan:#5dfcff;
-      --good:#32e6a8;
-      --warn:#ffd166;
-      --bad:#ff4d6d;
-      --shadow: 0 20px 60px rgba(0,0,0,.55);
-      --shadow2: 0 10px 30px rgba(0,0,0,.35);
-      --radius: 18px;
-      --radius2: 14px;
-      --ring: 0 0 0 3px rgba(73,183,255,.18), 0 0 0 1px rgba(73,183,255,.25) inset;
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      text-align: center;
     }
+    .input-group {
+      margin-bottom: 2rem;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    input {
+      width: 60%;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    video {
+      width: 100%;
+      background: #000;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
 
-    [data-theme="light"]{
-      --bg0:#f6f9ff;
+  <h1>Terabox Video Player</h1>
+  
+  <div class="input-group">
+    <input type="text" id="teraboxUrl" placeholder="Paste Terabox share link here..." />
+    <button id="playBtn">Play</button>
+  </div>
+
+  <video id="videoPlayer" controls autoplay></video>
+
+  <script>
+    document.getElementById('playBtn').addEventListener('click', async () => {
+      const urlInput = document.getElementById('teraboxUrl').value.trim();
+      const videoPlayer = document.getElementById('videoPlayer');
+
+      if (!urlInput) {
+        alert('Please enter a valid Terabox link.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:3000/api/terabox?url=${encodeURIComponent(urlInput)}`);
+        const data = await response.json();
+
+        if (data.direct) {
+          videoPlayer.src = data.direct;
+        } else {
+          alert(data.error || 'Direct link not found.');
+        }
+      } catch (error) {
+        alert('Error fetching the video link. Make sure the backend server is running.');
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html>
       --bg1:#eef6ff;
       --card: rgba(255,255,255,.78);
       --card2: rgba(255,255,255,.88);
