@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Terabox Player</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      text-align: center;
+    }
+    .input-group {
+      margin-bottom: 2rem;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+    }
+    input {
+      width: 60%;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    video {
+      width: 100%;
+      background: #000;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Terabox Video Player</h1>
+  
+  <div class="input-group">
+    <input type="text" id="teraboxUrl" placeholder="Paste Terabox share link here..." />
+    <button id="playBtn">Play</button>
+  </div>
+
+  <video id="videoPlayer" controls autoplay></video>
+
+  <script>
+    document.getElementById('playBtn').addEventListener('click', async () => {
+      const urlInput = document.getElementById('teraboxUrl').value.trim();
+      const videoPlayer = document.getElementById('videoPlayer');
+
+      if (!urlInput) {
+        alert('Please enter a valid Terabox link.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:3000/api/terabox?url=${encodeURIComponent(urlInput)}`);
+        const data = await response.json();
+
+        if (data.direct) {
+          videoPlayer.src = data.direct;
+        } else {
+          alert(data.error || 'Direct link not found.');
+        }
+      } catch (error) {
+        alert('Error fetching the video link. Make sure the backend server is running.');
+        console.error(error);
+      }
+    });
+  </script>
+</body>
+</html>
