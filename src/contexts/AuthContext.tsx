@@ -61,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [shop, setShop] = useState<Shop | null>(null);
   const [role, setRole] = useState<'owner' | 'staff' | 'admin' | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   const refreshAuth = async () => {
     try {
@@ -69,7 +70,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user as User || null);
       
       if (session?.user) {
-        // Directly query shops table by owner_id
         const { data: shopData, error } = await supabase
           .from('shops')
           .select('*')
@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Auth refresh error:', err);
     } finally {
       setLoading(false);
+      setInitialized(true);
     }
   };
 
@@ -107,8 +108,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      refreshAuth();
+    // Only listen for sign out events, not all auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setSession(null);
+        setShop(null);
+        setRole(null);
+        setLoading(true);
+        setInitialized(false);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        refreshAuth();
+      }
     });
 
     return () => subscription.unsubscribe();
