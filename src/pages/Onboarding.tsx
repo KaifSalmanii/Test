@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 export default function Onboarding() {
-  const { user } = useAuth();
+  const { user, refreshAuth } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -79,7 +79,11 @@ export default function Onboarding() {
         throw new Error(errData.error || 'Failed to create shop');
       }
       
-      window.location.href = '/dashboard';
+      // Refresh auth to get the new shop
+      await refreshAuth();
+      
+      // Navigate to dashboard
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Shop creation failed.');
       console.error(err);
