@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Printer, Upload, Camera, FileText, MapPin, Phone, Clock, Star, 
   ChevronRight, Check, X, Minus, Plus, Truck, Store, CreditCard, 
-  Loader2, Image, File, Trash2, RotateCw, ZoomIn, ZoomOut
+  Loader2, Trash2
 } from 'lucide-react';
 
 interface Shop {
@@ -69,10 +69,12 @@ export default function CustomerShop() {
   const fetchShop = async () => {
     try {
       const res = await fetch(`/api/shops?slug=${slug}`);
+      if (!res.ok) throw new Error('Shop not found');
       const data = await res.json();
       setShop(data);
     } catch (err) {
       console.error('Failed to fetch shop:', err);
+      setShop(null);
     } finally {
       setLoading(false);
     }
@@ -138,7 +140,6 @@ export default function CustomerShop() {
     setSubmitting(true);
 
     try {
-      // Upload files first
       const uploadedItems = await Promise.all(files.map(async (file) => {
         const reader = new FileReader();
         const base64 = await new Promise<string>((resolve) => {
@@ -169,7 +170,6 @@ export default function CustomerShop() {
         };
       }));
 
-      // Create order
       const orderRes = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -288,7 +288,6 @@ export default function CustomerShop() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              {/* Upload Area */}
               <div 
                 onClick={() => fileInputRef.current?.click()}
                 className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-8 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all"
@@ -306,13 +305,11 @@ export default function CustomerShop() {
                 />
               </div>
 
-              {/* Camera Button */}
               <button className="w-full py-3 px-4 bg-gray-100 dark:bg-gray-800 rounded-xl flex items-center justify-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-700 transition">
                 <Camera className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                 <span className="text-gray-700 dark:text-gray-300 font-medium">Scan Document with Camera</span>
               </button>
 
-              {/* File List */}
               {files.length > 0 && (
                 <div className="space-y-3">
                   {files.map((file) => (
@@ -341,7 +338,6 @@ export default function CustomerShop() {
                 </div>
               )}
 
-              {/* Continue Button */}
               {files.length > 0 && (
                 <button
                   onClick={() => setStep(2)}
@@ -370,7 +366,6 @@ export default function CustomerShop() {
                     <p className="font-medium text-gray-900 dark:text-white truncate flex-1">{file.name}</p>
                   </div>
 
-                  {/* Print Type */}
                   <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Print Type</label>
                     <div className="grid grid-cols-2 gap-2">
@@ -398,7 +393,6 @@ export default function CustomerShop() {
                     </div>
                   </div>
 
-                  {/* Paper Size */}
                   <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Paper Size</label>
                     <div className="grid grid-cols-3 gap-2">
@@ -418,7 +412,6 @@ export default function CustomerShop() {
                     </div>
                   </div>
 
-                  {/* Sides */}
                   <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Print Sides</label>
                     <div className="grid grid-cols-2 gap-2">
@@ -445,7 +438,6 @@ export default function CustomerShop() {
                     </div>
                   </div>
 
-                  {/* Copies */}
                   <div>
                     <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">Copies</label>
                     <div className="flex items-center gap-3">
@@ -484,7 +476,6 @@ export default function CustomerShop() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              {/* Customer Info */}
               <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm space-y-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Your Details</h3>
                 <input
@@ -503,7 +494,6 @@ export default function CustomerShop() {
                 />
               </div>
 
-              {/* Delivery Option */}
               <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm space-y-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Delivery</h3>
                 <div className="grid grid-cols-2 gap-3">
@@ -557,7 +547,6 @@ export default function CustomerShop() {
                 )}
               </div>
 
-              {/* Payment Method */}
               <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm space-y-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white">Payment</h3>
                 <div className="space-y-2">
@@ -606,7 +595,6 @@ export default function CustomerShop() {
                 </div>
               </div>
 
-              {/* Order Summary */}
               <div className="bg-white dark:bg-gray-800 rounded-xl p-4 shadow-sm">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3">Order Summary</h3>
                 <div className="space-y-2 text-sm">
@@ -633,7 +621,6 @@ export default function CustomerShop() {
                 </div>
               </div>
 
-              {/* Notes */}
               <textarea
                 placeholder="Special instructions (optional)"
                 value={notes}
@@ -684,7 +671,7 @@ export default function CustomerShop() {
 
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 {deliveryType === 'pickup' 
-                  ? 'You\'ll be notified when your order is ready for pickup.'
+                  ? "You'll be notified when your order is ready for pickup."
                   : 'Your order will be delivered to your address.'}
               </p>
             </motion.div>

@@ -16,8 +16,8 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Customer Route - No Auth */}
-          <Route path="/shop/:slug" element={<CustomerShop />} />
+          {/* Public Customer Route - Direct slug at root */}
+          <Route path="/:slug" element={<CustomerShop />} />
           
           {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
@@ -61,7 +61,7 @@ function App() {
             </ProtectedRoute>
           } />
           
-          {/* Default Route */}
+          {/* Default Route - Go to login */}
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>

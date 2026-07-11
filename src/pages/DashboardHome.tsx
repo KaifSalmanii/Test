@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { 
   Printer, Store, IndianRupee, FileText, Users, Truck,
   Clock, CheckCircle, AlertCircle, TrendingUp, Calendar,
-  QrCode, Settings, Eye, LogOut, RefreshCw, Volume2
+  QrCode, Settings, LogOut, RefreshCw, Volume2
 } from 'lucide-react';
 
 interface Order {
@@ -30,11 +30,15 @@ export default function DashboardHome() {
   const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
-    if (!loading && !user) navigate('/login');
-    if (!loading && user && !shop) navigate('/onboarding');
-    if (shop) {
-      fetchOrders();
-      fetchStats();
+    if (!loading) {
+      if (!user) {
+        navigate('/login');
+      } else if (!shop) {
+        navigate('/onboarding');
+      } else {
+        fetchOrders();
+        fetchStats();
+      }
     }
   }, [user, shop, loading]);
 
@@ -54,16 +58,6 @@ export default function DashboardHome() {
     try {
       const res = await fetch(`/api/analytics?shop_id=${shop.id}`);
       const data = await res.json();
-      
-      // Calculate today's stats
-      const today = new Date().toDateString();
-      const todayOrders = orders.filter(o => new Date(o.created_at).toDateString() === today);
-      const todayRevenue = todayOrders.reduce((sum, o) => sum + o.total, 0);
-      const todayPages = todayOrders.reduce((sum, o) => {
-        return sum + (o.order_items?.reduce((p, i) => p + i.pages * i.copies, 0) || 0);
-      }, 0);
-      
-      setTodayStats({ revenue: todayRevenue, orders: todayOrders.length, pages: todayPages });
       setWeekStats({ 
         revenue: data.totalRevenue || 0, 
         orders: data.totalOrders || 0, 
@@ -181,11 +175,6 @@ export default function DashboardHome() {
                 </div>
               ))}
             </div>
-            {pendingOrders.length > 3 && (
-              <button onClick={() => navigate('/orders')} className="w-full mt-2 text-center text-red-600 font-medium text-sm">
-                View all {pendingOrders.length} pending orders
-              </button>
-            )}
           </div>
         )}
 
@@ -249,7 +238,7 @@ export default function DashboardHome() {
       </div>
 
       {/* QR Modal */}
-      {showQR && (
+      {showQR && shop && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -269,7 +258,7 @@ export default function DashboardHome() {
               </div>
             </div>
             <p className="text-center text-sm text-gray-500 mt-4">
-              {window.location.origin}/shop/{shop?.slug}
+              {window.location.origin}/{shop.slug}
             </p>
             <button className="w-full mt-4 py-3 bg-indigo-600 text-white rounded-xl font-medium">
               Download QR

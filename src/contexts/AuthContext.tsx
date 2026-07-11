@@ -25,9 +25,9 @@ interface Shop {
   };
   settings: {
     gst_rate?: number;
-  open_time?: string;
+    open_time?: string;
     close_time?: string;
-  phone?: string;
+    phone?: string;
     address?: string;
   };
 }
@@ -63,24 +63,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null);
 
   const refreshAuth = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    setSession(session);
-    setUser(session?.user as User || null);
-    
-    if (session?.user) {
-      try {
-        const res = await fetch('/api/auth', {
-          headers: { Authorization: `Bearer ${session.access_token}` }
-        });
-        const data = await res.json();
-        setShop(data.shop);
-        setRole(data.role);
-        setPermissions(data.permissions);
-      } catch (err) {
-        console.error('Auth refresh error:', err);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setUser(session?.user as User || null);
+      
+      if (session?.user) {
+        // Directly query shops table by owner_id
+        const { data: shopData, error } = await supabase
+          .from('shops')
+          .select('*')
+          .eq('owner_id', session.user.id)
+          .eq('is_active', true)
+          .single();
+        
+        if (!error && shopData) {
+          setShop(shopData as Shop);
+          setRole('owner');
+        } else {
+          setShop(null);
+          setRole(null);
+        }
+      } else {
+        setShop(null);
+        setRole(null);
       }
+    } catch (err) {
+      console.error('Auth refresh error:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const signOut = async () => {
