@@ -15,5 +15,160 @@ export default async function handler(req, res) {
           .from('orders')
           .select('*, order_items(*)')
           .eq('id', id)
-n          .single();
-        if (error) throw error;\n        return res.status(200).json(data);\n      }\n      \n      let query = supabase.from('orders').select('*');\n      if (shop_id) query = query.eq('shop_id', shop_id);\n      if (status) query = query.eq('status', status);\n      if (customer_phone) query = query.eq('customer_phone', customer_phone);\n      \n      query = query.order('created_at', { ascending: false }).limit(100);\n      const { data, error } = await query;\n      if (error) throw error;\n      return res.status(200).json(data);\n    }\n    \n    if (req.method === 'POST') {\n      const { shop_id, customer_name, customer_phone, customer_address, delivery_type, delivery_km, items, payment_method, notes, utr_number } = req.body;\n      \n      const { data: shop } = await supabase.from('shops').select('rates, settings').eq('id', shop_id).single();\n      if (!shop) return res.status(400).json({ error: 'Shop not found' });\n      \n      const rates = shop.rates || {};\n      const settings = shop.settings || {};\n      \n      let subtotal = 0;\n      const orderItems = items.map(item => {\n        const rate = item.print_type === 'color' ? (rates.color_a4 || 10) : (rates.bw_a4 || 2);\n        const sideMultiplier = item.sides === 'double' ? 0.5 : 1;\n        const price = item.pages * item.copies * rate * sideMultiplier;\n        subtotal += price;\n        return { \n          order_id: null,\n          document_url: item.document_url || null,\n          document_name: item.document_name || 'document',\n          pages: item.pages || 1,\n          copies: item.copies || 1,\n          print_type: item.print_type || 'bw',\n          paper_size: item.paper_size || 'A4',\n          sides: item.sides || 'single',\n          price\n        };\n      });\n      \n      const deliveryFee = delivery_type === 'delivery' ? (delivery_km || 0) * (rates.delivery_per_km || 5) : 0;\n      const gstRate = settings.gst_rate || 18;\n      const gst = subtotal * (gstRate / 100);\n      const total = subtotal + deliveryFee + gst;\n      \n      let initialStatus = 'pending';\n      let initialPaymentStatus = 'pending';\n      \n      if (payment_method === 'auto_upi') {\n        initialStatus = 'printing';\n        initialPaymentStatus = 'paid';\n      } else if (payment_method === 'manual_upi' && utr_number) {\n        initialStatus = 'pending_verification';\n      }\n      \n      const { data: order, error: orderError } = await supabase\n        .from('orders')\n        .insert({\n          shop_id,\n          customer_name,\n          customer_phone,\n          customer_address,\n          delivery_type,\n          delivery_km,\n          delivery_fee: deliveryFee,\n          status: initialStatus,\n          payment_method,\n          payment_status: initialPaymentStatus,\n          subtotal,\n          gst,\n          gst_rate: gstRate,\n          total,\n          notes,\n          utr_number\n        })\n        .select()\n        .single();\n      \n      if (orderError) {\n        console.error('Order insert error:', orderError);\n        throw orderError;\n      }\n      \n      const itemsWithOrderId = orderItems.map(item => ({ ...item, order_id: order.id }));\n      const { error: itemsError } = await supabase.from('order_items').insert(itemsWithOrderId);\n      if (itemsError) {\n        console.error('Items insert error:', itemsError);\n        throw itemsError;\n      }\n      \n      return res.status(201).json({ ...order, items: orderItems });\n    }\n    \n    if (req.method === 'PUT') {\n      const { id, status, payment_status, utr_number, review_rating, review_text } = req.body;\n      const updates = {};\n      if (status) updates.status = status;\n      if (payment_status) updates.payment_status = payment_status;\n      if (utr_number) updates.utr_number = utr_number;\n      if (review_rating !== undefined) updates.review_rating = review_rating;\n      if (review_text) updates.review_text = review_text;\n      if (status === 'completed') updates.completed_at = new Date().toISOString();\n      \n      const { data, error } = await supabase\n        .from('orders')\n        .update(updates)\n        .eq('id', id)\n        .select()\n        .single();\n      if (error) throw error;\n      \n      if (status === 'completed') {\n        const { data: items } = await supabase.from('order_items').select('document_url').eq('order_id', id);\n        if (items) {\n          for (const item of items) {\n            if (item.document_url) {\n              try {\n                const path = item.document_url.split('/documents/').pop();\n                await supabase.storage.from('documents').remove([path]);\n              } catch (e) {\n                console.error('Failed to delete document:', e);\n              }\n            }\n          }\n        }\n      }\n      \n      return res.status(200).json(data);\n    }\n    \n    res.status(405).json({ error: 'Method not allowed' });\n  } catch (err) {\n    console.error('API error:', err);\n    res.status(500).json({ error: err.message });\n  }\n}
+          .single();
+        if (error) throw error;
+        return res.status(200).json(data);
+      }
+      
+      let query = supabase.from('orders').select('*');
+      if (shop_id) query = query.eq('shop_id', shop_id);
+      if (status) query = query.eq('status', status);
+      if (customer_phone) query = query.eq('customer_phone', customer_phone);
+      
+      query = query.order('created_at', { ascending: false }).limit(100);
+      const { data, error } = await query;
+      if (error) throw error;
+      return res.status(200).json(data);
+    }
+    
+    if (req.method === 'POST') {
+      const { shop_id, customer_name, customer_phone, customer_address, delivery_type, delivery_km, items, payment_method, notes } = req.body;
+      
+      // Validate required fields
+      if (!shop_id || !customer_name || !customer_phone || !items || items.length === 0) {
+        return res.status(400).json({ error: 'Missing required fields' });
+      }
+      
+      // Get shop details
+      const { data: shop, error: shopError } = await supabase
+        .from('shops')
+        .select('rates, settings')
+        .eq('id', shop_id)
+        .single();
+      
+      if (shopError || !shop) {
+        return res.status(400).json({ error: 'Shop not found' });
+      }
+      
+      const rates = shop.rates || {};
+      const settings = shop.settings || {};
+      
+      // Calculate pricing
+      let subtotal = 0;
+      const orderItems = items.map(item => {
+        const rate = item.print_type === 'color' 
+          ? (item.paper_size === 'A3' ? (rates.color_a3 || 20) : (rates.color_a4 || 10))
+          : (item.paper_size === 'A3' ? (rates.bw_a3 || 4) : (rates.bw_a4 || 2));
+        const sideMultiplier = item.sides === 'double' ? 0.5 : 1;
+        const price = (item.pages || 1) * (item.copies || 1) * rate * sideMultiplier;
+        subtotal += price;
+        return {
+          document_url: item.document_url || null,
+          document_name: item.document_name || 'document.pdf',
+          pages: item.pages || 1,
+          copies: item.copies || 1,
+          print_type: item.print_type || 'bw',
+          paper_size: item.paper_size || 'A4',
+          sides: item.sides || 'single',
+          price
+        };
+      });
+      
+      const deliveryFee = delivery_type === 'delivery' ? (delivery_km || 0) * (rates.delivery_per_km || 5) : 0;
+      const gstRate = settings.gst_rate || 18;
+      const gst = subtotal * (gstRate / 100);
+      const total = subtotal + deliveryFee + gst;
+      
+      // Determine initial status based on payment method
+      let initialStatus = 'pending';
+      let initialPaymentStatus = 'pending';
+      
+      if (payment_method === 'auto_upi') {
+        initialStatus = 'printing';
+        initialPaymentStatus = 'paid';
+      }
+      
+      // Create order
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          shop_id,
+          customer_name,
+          customer_phone,
+          customer_address: customer_address || null,
+          delivery_type: delivery_type || 'pickup',
+          delivery_km: delivery_km || 0,
+          delivery_fee: deliveryFee,
+          status: initialStatus,
+          payment_method: payment_method || 'cash',
+          payment_status: initialPaymentStatus,
+          subtotal,
+          gst,
+          gst_rate: gstRate,
+          total,
+          notes: notes || null
+        })
+        .select()
+        .single();
+      
+      if (orderError) {
+        console.error('Order insert error:', orderError);
+        return res.status(500).json({ error: 'Failed to create order: ' + orderError.message });
+      }
+      
+      // Create order items
+      const itemsWithOrderId = orderItems.map(item => ({ ...item, order_id: order.id }));
+      const { error: itemsError } = await supabase.from('order_items').insert(itemsWithOrderId);
+      
+      if (itemsError) {
+        console.error('Items insert error:', itemsError);
+        // Try to delete the order if items failed
+        await supabase.from('orders').delete().eq('id', order.id);
+        return res.status(500).json({ error: 'Failed to create order items: ' + itemsError.message });
+      }
+      
+      return res.status(201).json({ ...order, items: orderItems });
+    }
+    
+    if (req.method === 'PUT') {
+      const { id, status, payment_status, utr_number, review_rating, review_text } = req.body;
+      
+      if (!id) {
+        return res.status(400).json({ error: 'Order ID required' });
+      }
+      
+      const updates = {};
+      if (status) updates.status = status;
+      if (payment_status) updates.payment_status = payment_status;
+      if (utr_number) updates.utr_number = utr_number;
+      if (review_rating !== undefined) updates.review_rating = review_rating;
+      if (review_text) updates.review_text = review_text;
+      if (status === 'completed') updates.completed_at = new Date().toISOString();
+      
+      const { data, error } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+      
+      // Delete documents on completion
+      if (status === 'completed') {
+        const { data: items } = await supabase
+          .from('order_items')
+          .select('document_url')
+          .eq('order_id', id);
+        
+        if (items) {
+          for (const item of items) {
+            if (item.document_url) {
+n              try {
+                const path = item.document_url.split('/documents/').pop();
+                await supabase.storage.from('documents').remove([path]);
+              } catch (e) {
+                console.error('Failed to delete document:', e);
+              }\n            }\n          }\n        }\n      }\n      \n      return res.status(200).json(data);\n    }\n    \n    res.status(405).json({ error: 'Method not allowed' });\n  } catch (err) {\n    console.error('API error:', err);\n    res.status(500).json({ error: err.message });\n  }\n}
