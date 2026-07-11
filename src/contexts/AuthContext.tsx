@@ -61,7 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [shop, setShop] = useState<Shop | null>(null);
   const [role, setRole] = useState<'owner' | 'staff' | 'admin' | null>(null);
   const [permissions, setPermissions] = useState<Record<string, boolean> | null>(null);
-  const [initialized, setInitialized] = useState(false);
 
   const refreshAuth = async () => {
     try {
@@ -70,15 +69,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user as User || null);
       
       if (session?.user) {
-        const { data: shopData, error } = await supabase
+        // Get the first/latest shop for this user (not .single() which fails if multiple)
+        const { data: shops, error } = await supabase
           .from('shops')
           .select('*')
           .eq('owner_id', session.user.id)
           .eq('is_active', true)
-          .single();
+          .order('created_at', { ascending: false })
+          .limit(1);
         
-        if (!error && shopData) {
-          setShop(shopData as Shop);
+        if (!error && shops && shops.length > 0) {
+          setShop(shops[0] as Shop);
           setRole('owner');
         } else {
           setShop(null);
@@ -92,7 +93,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Auth refresh error:', err);
     } finally {
       setLoading(false);
-      setInitialized(true);
     }
   };
 
@@ -108,7 +108,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshAuth();
 
-    // Only listen for sign out events, not all auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         setUser(null);
@@ -116,8 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setShop(null);
         setRole(null);
         setLoading(true);
-        setInitialized(false);
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      } else if (event === 'SIGNED_IN') {
         refreshAuth();
       }
     });
