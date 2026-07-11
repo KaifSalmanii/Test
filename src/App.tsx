@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Onboarding from './pages/Onboarding';
 import DashboardHome from './pages/DashboardHome';
 import Dashboard from './pages/Dashboard';
+import Settings from './pages/Settings';
 import AdminDashboard from './pages/AdminDashboard';
 import CustomerShop from './pages/CustomerShop';
 
@@ -16,52 +17,14 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public Customer Route - Direct slug at root */}
+          <Route path="/:slug/history" element={<CustomerShop />} />
           <Route path="/:slug" element={<CustomerShop />} />
-          
-          {/* Auth Routes */}
           <Route path="/login" element={<Login />} />
-          
-          {/* Onboarding - New Shop Setup */}
-          <Route path="/onboarding" element={
-            <ProtectedRoute>
-              <Onboarding />
-            </ProtectedRoute>
-          } />
-          
-          {/* Dashboard Routes */}
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <DashboardHome />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/orders" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          
-          <Route path="/analytics" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          
-          {/* Admin Route */}
-          <Route path="/admin" element={
-            <ProtectedRoute>
-              <AdminDashboard />
-            </ProtectedRoute>
-          } />
-          
-          {/* Default Route - Go to login */}
+          <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardHome /></ProtectedRoute>} />
+          <Route path="/orders" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
