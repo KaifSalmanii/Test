@@ -1,11 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  // Vercel optimization
-  output: 'standalone',
-  experimental: {
-    // Helps with static generation
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
