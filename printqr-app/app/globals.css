@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #0f766e;
+  --primary-dark: #134e4b;
+}
+
+body {
+  font-family: var(--font-geist-sans);
+}
+
+.font-devanagari {
+  font-family: var(--font-devanagari), var(--font-geist-sans);
+}
+
+.modern-shadow {
+  box-shadow: 0 10px 15px -3px rgb(15 118 110 / 0.1), 0 4px 6px -4px rgb(15 118 110 / 0.1);
+}
+
+.print-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.print-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 25px -12px rgb(15 118 110 / 0.15), 0 10px 10px -6px rgb(15 118 110 / 0.15);
+}
+
+.qr-code {
+  background: linear-gradient(135deg, #0f766e, #134e4b);
+  box-shadow: 0 0 0 12px #e0f2fe, 0 25px 50px -12px rgb(15 118 110 / 0.25);
+}
+
+.stat-card {
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-4px);
+}
+
+.price-display {
+  font-size: 1.85rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.modern-btn {
+  transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+}
+
+.modern-btn:hover {
+  transform: translateY(-2px);
+}
+
+.pdf-page {
+  border: 2px solid #64748b;
+  transition: all 0.2s ease;
+}
+
+.pdf-page.selected {
+  border-color: #0f766e;
+  background-color: #f0fdfa;
+}
+
+.payment-option {
+  transition: all 0.2s ease;
+}
+
+.payment-option:hover {
+  border-color: #0f766e;
+}
+
+.order-row {
+  transition: all 0.2s ease;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #0f766e;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #134e4b;
+}
